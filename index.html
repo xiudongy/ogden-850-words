@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>词趣 · Basic English 850</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#6C63FF">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+</head>
+<body>
+  <div id="app">
+    <!-- ===== HOME PAGE ===== -->
+    <div id="page-home" class="page active">
+      <div class="home-header">
+        <div class="home-title">
+          <span class="logo-icon"><i data-lucide="book-open"></i></span>
+          <h1>词趣 <small>Basic English 850</small></h1>
+        </div>
+        <div class="streak-badge" id="streak-badge">
+          <i data-lucide="flame" style="width:16px;height:16px;"></i>
+          <span id="streak-count">0</span>
+        </div>
+      </div>
+
+      <div class="progress-section">
+        <div class="progress-header">
+          <span>学习进度</span>
+          <span id="progress-text">0 / 850</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+        </div>
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="stat-icon"><i data-lucide="star"></i></span>
+            <span class="stat-value" id="stat-stars">0</span>
+            <span class="stat-label">星星</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon"><i data-lucide="book-open-text"></i></span>
+            <span class="stat-value" id="stat-learned">0</span>
+            <span class="stat-label">已学</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon"><i data-lucide="circle-check"></i></span>
+            <span class="stat-value" id="stat-mastered">0</span>
+            <span class="stat-label">掌握</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mode-grid">
+        <div class="mode-card" data-mode="flashcard">
+          <div class="mode-icon" style="background: linear-gradient(135deg, #6C63FF, #A78BFA);">
+            <i data-lucide="layers"></i>
+          </div>
+          <div class="mode-info">
+            <h3>翻卡片</h3>
+            <p>翻转卡片学习单词</p>
+          </div>
+        </div>
+        <div class="mode-card" data-mode="quiz">
+          <div class="mode-icon" style="background: linear-gradient(135deg, #FF6584, #FFB347);">
+            <i data-lucide="target"></i>
+          </div>
+          <div class="mode-info">
+            <h3>选择题</h3>
+            <p>四选一测试记忆</p>
+          </div>
+        </div>
+        <div class="mode-card" data-mode="spelling">
+          <div class="mode-icon" style="background: linear-gradient(135deg, #43E97B, #38F9D7);">
+            <i data-lucide="pencil"></i>
+          </div>
+          <div class="mode-info">
+            <h3>拼写</h3>
+            <p>根据中文拼英文</p>
+          </div>
+        </div>
+        <div class="mode-card" data-mode="memory">
+          <div class="mode-icon" style="background: linear-gradient(135deg, #F093FB, #F5576C);">
+            <i data-lucide="brain"></i>
+          </div>
+          <div class="mode-info">
+            <h3>翻牌配对</h3>
+            <p>记忆配对小游戏</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="category-section">
+        <h2 class="section-title">分类浏览</h2>
+        <div class="category-list" id="category-list"></div>
+      </div>
+    </div>
+
+    <!-- ===== CATEGORY PAGE ===== -->
+    <div id="page-category" class="page">
+      <div class="page-header">
+        <button class="back-btn" data-back="home">
+          <i data-lucide="arrow-left" style="width:18px;height:18px;"></i> 返回
+        </button>
+        <h2 id="category-title">分类</h2>
+        <span id="category-progress" class="category-progress-badge"></span>
+      </div>
+      <div class="word-grid" id="word-grid"></div>
+    </div>
+
+    <!-- ===== FLASHCARD PAGE ===== -->
+    <div id="page-flashcard" class="page">
+      <div class="page-header">
+        <button class="back-btn" data-back="home">
+          <i data-lucide="arrow-left" style="width:18px;height:18px;"></i> 返回
+        </button>
+        <h2>翻卡片</h2>
+        <span id="flashcard-counter" class="counter-badge">1/10</span>
+      </div>
+      <div class="flashcard-area">
+        <div class="flashcard-container" id="flashcard-container">
+          <div class="flashcard" id="flashcard">
+            <div class="flashcard-front">
+              <div class="flashcard-word" id="flashcard-en"></div>
+              <div class="flashcard-hint">点击翻转查看中文</div>
+            </div>
+            <div class="flashcard-back">
+              <div class="flashcard-word" id="flashcard-zh"></div>
+              <div class="flashcard-cat" id="flashcard-cat"></div>
+            </div>
+          </div>
+        </div>
+        <div class="flashcard-controls" style="opacity:0.4;pointer-events:none;">
+          <button class="fc-btn fc-btn-no" id="fc-no" title="不认识">
+            <i data-lucide="circle-x" style="width:18px;height:18px;"></i> 不认识
+          </button>
+          <button class="fc-btn fc-btn-yes" id="fc-yes" title="认识">
+            <i data-lucide="circle-check" style="width:18px;height:18px;"></i> 认识
+          </button>
+        </div>
+      </div>
+      <div class="flashcard-settings">
+        <label>分类：</label>
+        <select id="fc-category">
+          <option value="all">全部 (850)</option>
+          <option value="operations">操作词 (100)</option>
+          <option value="general">通用词 (400)</option>
+          <option value="picturable">图示词 (200)</option>
+          <option value="qualities">一般性质 (100)</option>
+          <option value="opposites">对立性质 (50)</option>
+          <option value="new">未学过</option>
+        </select>
+        <label>数量：</label>
+        <select id="fc-count">
+          <option value="5">5</option>
+          <option value="10" selected>10</option>
+          <option value="20">20</option>
+          <option value="50">50</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ===== QUIZ PAGE ===== -->
+    <div id="page-quiz" class="page">
+      <div class="page-header">
+        <button class="back-btn" data-back="home">
+          <i data-lucide="arrow-left" style="width:18px;height:18px;"></i> 返回
+        </button>
+        <h2>选择题</h2>
+        <div class="quiz-score">
+          <span id="quiz-score">0</span>分
+        </div>
+      </div>
+      <div class="quiz-area" id="quiz-area">
+        <div class="quiz-progress-bar">
+          <div class="quiz-progress-fill" id="quiz-progress-fill"></div>
+        </div>
+        <div class="quiz-question">
+          <div class="quiz-prompt" id="quiz-prompt"></div>
+        </div>
+        <div class="quiz-options" id="quiz-options"></div>
+      </div>
+      <div class="quiz-result" id="quiz-result" style="display:none;">
+        <div class="result-icon" id="result-icon"></div>
+        <div class="result-title" id="result-title">太棒了！</div>
+        <div class="result-detail" id="result-detail"></div>
+        <div class="result-stars" id="result-stars"></div>
+        <button class="primary-btn" id="quiz-retry">再来一轮</button>
+      </div>
+      <div class="flashcard-settings">
+        <label>分类：</label>
+        <select id="quiz-category">
+          <option value="all">全部 (850)</option>
+          <option value="operations">操作词 (100)</option>
+          <option value="general">通用词 (400)</option>
+          <option value="picturable">图示词 (200)</option>
+          <option value="qualities">一般性质 (100)</option>
+          <option value="opposites">对立性质 (50)</option>
+          <option value="new">未学过</option>
+        </select>
+        <label>题数：</label>
+        <select id="quiz-count">
+          <option value="5">5</option>
+          <option value="10" selected>10</option>
+          <option value="20">20</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ===== SPELLING PAGE ===== -->
+    <div id="page-spelling" class="page">
+      <div class="page-header">
+        <button class="back-btn" data-back="home">
+          <i data-lucide="arrow-left" style="width:18px;height:18px;"></i> 返回
+        </button>
+        <h2>拼写</h2>
+        <div class="quiz-score">
+          <span id="spelling-score">0</span>分
+        </div>
+      </div>
+      <div class="spelling-area" id="spelling-area">
+        <div class="quiz-progress-bar">
+          <div class="quiz-progress-fill" id="spelling-progress-fill"></div>
+        </div>
+        <div class="spelling-question">
+          <div class="spelling-prompt" id="spelling-prompt"></div>
+          <div class="spelling-hint-text" id="spelling-hint-text"></div>
+        </div>
+        <div class="spelling-input-area">
+          <input type="text" id="spelling-input" placeholder="输入英文..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <button class="spelling-submit" id="spelling-submit">确认</button>
+        </div>
+        <div class="spelling-feedback" id="spelling-feedback"></div>
+        <button class="hint-btn" id="spelling-hint-btn">
+          <i data-lucide="lightbulb" style="width:14px;height:14px;"></i> 提示
+        </button>
+      </div>
+      <div class="quiz-result" id="spelling-result" style="display:none;">
+        <div class="result-icon" id="spelling-result-icon"></div>
+        <div class="result-title" id="spelling-result-title">太棒了！</div>
+        <div class="result-detail" id="spelling-result-detail"></div>
+        <div class="result-stars" id="spelling-result-stars"></div>
+        <button class="primary-btn" id="spelling-retry">再来一轮</button>
+      </div>
+      <div class="flashcard-settings">
+        <label>分类：</label>
+        <select id="spelling-category">
+          <option value="all">全部 (850)</option>
+          <option value="operations">操作词 (100)</option>
+          <option value="general">通用词 (400)</option>
+          <option value="picturable">图示词 (200)</option>
+          <option value="qualities">一般性质 (100)</option>
+          <option value="opposites">对立性质 (50)</option>
+          <option value="new">未学过</option>
+        </select>
+        <label>题数：</label>
+        <select id="spelling-count">
+          <option value="5">5</option>
+          <option value="10" selected>10</option>
+          <option value="20">20</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ===== MEMORY GAME PAGE ===== -->
+    <div id="page-memory" class="page">
+      <div class="page-header">
+        <button class="back-btn" data-back="home">
+          <i data-lucide="arrow-left" style="width:18px;height:18px;"></i> 返回
+        </button>
+        <h2>翻牌配对</h2>
+        <div class="memory-stats">
+          <span id="memory-moves">0</span> 步 · <span id="memory-pairs">0</span>/<span id="memory-total">0</span>对
+        </div>
+      </div>
+      <div class="memory-board" id="memory-board"></div>
+      <div class="memory-result" id="memory-result" style="display:none;">
+        <div class="result-icon" id="memory-result-icon"></div>
+        <div class="result-title" id="memory-result-title">配对完成！</div>
+        <div class="result-detail" id="memory-result-detail"></div>
+        <div class="result-stars" id="memory-result-stars"></div>
+        <button class="primary-btn" id="memory-retry">再来一局</button>
+      </div>
+      <div class="flashcard-settings">
+        <label>对数：</label>
+        <select id="memory-pairs-count">
+          <option value="4">4对</option>
+          <option value="6" selected>6对</option>
+          <option value="8">8对</option>
+          <option value="10">10对</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ===== PROGRESS PAGE ===== -->
+    <div id="page-progress" class="page">
+      <div class="page-header">
+        <button class="back-btn" data-back="home">
+          <i data-lucide="arrow-left" style="width:18px;height:18px;"></i> 返回
+        </button>
+        <h2>学习统计</h2>
+        <button class="reset-btn" id="reset-btn">重置</button>
+      </div>
+      <div class="progress-page-content">
+        <div class="big-stat-grid">
+          <div class="big-stat">
+            <div class="big-stat-number" id="pg-total-learned">0</div>
+            <div class="big-stat-label">已学单词</div>
+          </div>
+          <div class="big-stat">
+            <div class="big-stat-number" id="pg-total-mastered">0</div>
+            <div class="big-stat-label">已掌握</div>
+          </div>
+          <div class="big-stat">
+            <div class="big-stat-number" id="pg-total-stars">0</div>
+            <div class="big-stat-label">获得星星</div>
+          </div>
+          <div class="big-stat">
+            <div class="big-stat-number" id="pg-streak">0</div>
+            <div class="big-stat-label">连续天数</div>
+          </div>
+        </div>
+        <h3 class="section-title">分类进度</h3>
+        <div class="category-progress-list" id="category-progress-list"></div>
+        <h3 class="section-title">最近学过</h3>
+        <div class="recent-words" id="recent-words"></div>
+      </div>
+    </div>
+
+    <!-- ===== BOTTOM NAV ===== -->
+    <nav class="bottom-nav">
+      <div class="nav-item active" data-page="home">
+        <i data-lucide="home" class="nav-icon"></i>
+        <span class="nav-label">首页</span>
+      </div>
+      <div class="nav-item" data-page="flashcard">
+        <i data-lucide="layers" class="nav-icon"></i>
+        <span class="nav-label">卡片</span>
+      </div>
+      <div class="nav-item" data-page="quiz">
+        <i data-lucide="target" class="nav-icon"></i>
+        <span class="nav-label">测验</span>
+      </div>
+      <div class="nav-item" data-page="memory">
+        <i data-lucide="brain" class="nav-icon"></i>
+        <span class="nav-label">配对</span>
+      </div>
+      <div class="nav-item" data-page="progress">
+        <i data-lucide="chart-bar" class="nav-icon"></i>
+        <span class="nav-label">统计</span>
+      </div>
+    </nav>
+
+    <!-- ===== CONFETTI CANVAS ===== -->
+    <canvas id="confetti-canvas"></canvas>
+  </div>
+
+  <script src="words.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

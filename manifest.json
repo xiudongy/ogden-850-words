@@ -1,0 +1,16 @@
+{
+  "name": "词趣 · Basic English 850",
+  "short_name": "词趣",
+  "description": "基于Ogden基础英语850词的趣味学习工具",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F3FF",
+  "theme_color": "#6C63FF",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
