@@ -920,11 +920,10 @@ function getWordsByCategory(categoryId) {
   return cat.words.map(w => ({ ...w, category: cat.id, categoryName: cat.nameZh, categoryIcon: cat.icon, categoryColor: cat.color }));
 }
 
-// Helper: get random words (excluding certain words)
+// Helper: get random words (excluding certain words) - uses proper Fisher-Yates shuffle
 function getRandomWords(count, exclude = []) {
   const all = getAllWords().filter(w => !exclude.includes(w.en));
-  const shuffled = [...all].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
+  return shuffle(all).slice(0, count);
 }
 
 // Helper: shuffle array

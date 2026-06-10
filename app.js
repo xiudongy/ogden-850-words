@@ -27,7 +27,7 @@ function saveProgress(data) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (e) {
     // Handle quota exceeded - trim old data
-    if (e.name === 'QuotaExceededError' || e.code === 22) {
+    if (e.name === 'QuotaExceededError') {
       data.recentWords = data.recentWords.slice(0, 5);
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
     }
@@ -36,7 +36,15 @@ function saveProgress(data) {
 
 function getProgress() {
   const saved = loadProgress();
-  if (saved) return saved;
+  if (saved && typeof saved === 'object' && typeof saved.words === 'object' && !Array.isArray(saved.words)) {
+    return {
+      words: saved.words || {},
+      stars: Number(saved.stars) || 0,
+      streak: Number(saved.streak) || 0,
+      lastDate: saved.lastDate || null,
+      recentWords: Array.isArray(saved.recentWords) ? saved.recentWords : []
+    };
+  }
   return {
     words: {},
     stars: 0,
@@ -96,8 +104,10 @@ function updateStreak() {
   const progress = getProgress();
   const today = new Date().toDateString();
   if (progress.lastDate !== today) {
-    const yesterday = new Date(Date.now() - 86400000).toDateString();
-    if (progress.lastDate === yesterday) {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toDateString();
+    if (progress.lastDate === yesterdayStr) {
       progress.streak++;
     } else {
       progress.streak = 1;
@@ -287,8 +297,12 @@ let confettiPieces = [];
 let confettiAnimating = false;
 
 function resizeConfetti() {
-  confettiCanvas.width = window.innerWidth;
-  confettiCanvas.height = window.innerHeight;
+  const dpr = window.devicePixelRatio || 1;
+  confettiCanvas.width = window.innerWidth * dpr;
+  confettiCanvas.height = window.innerHeight * dpr;
+  confettiCanvas.style.width = window.innerWidth + 'px';
+  confettiCanvas.style.height = window.innerHeight + 'px';
+  confettiCtx.scale(dpr, dpr);
 }
 window.addEventListener('resize', resizeConfetti);
 resizeConfetti();
@@ -504,8 +518,21 @@ function showFlashcard() {
     playSound('victory');
     launchConfetti();
     addStars(Math.ceil(fcWords.length / 2));
-    alert(`卡片翻完啦！获得 ${Math.ceil(fcWords.length / 2)} 颗星星！`);
-    navigateTo('home');
+    // Show inline completion message instead of alert()
+    const starCount = Math.ceil(fcWords.length / 2);
+    const overlay = document.createElement('div');
+    overlay.className = 'word-popup-overlay';
+    overlay.innerHTML = `
+      <div class="word-popup">
+        <div class="result-icon icon-success">${icon('trophy', 40)}</div>
+        <div class="result-title">卡片翻完啦！</div>
+        <div class="result-detail">获得 ${starCount} 颗星星</div>
+        <div class="result-stars">${renderStars(starCount > 3 ? 3 : starCount, 3)}</div>
+        <button class="primary-btn" onclick="this.closest('.word-popup-overlay').remove(); navigateTo('home');">完成</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    refreshIcons();
     return;
   }
 
@@ -525,6 +552,7 @@ function showFlashcard() {
 }
 
 document.getElementById('flashcard-container').addEventListener('click', () => {
+  if (fcLocked) return;
   fcFlipped = !fcFlipped;
   document.getElementById('flashcard').classList.toggle('flipped');
   playSound('flip');
@@ -540,9 +568,17 @@ document.getElementById('fc-no').addEventListener('click', () => {
   if (fcLocked) return;
   fcLocked = true;
   if (fcIndex < fcWords.length) {
-    // FIX #1: Use updateWordStatus for flashcard - "don't know" means keep/put as new
-    recordAnswer(fcWords[fcIndex].en, false);
-    updateWordStatus(fcWords[fcIndex].en, 'new');
+    // Combined: record answer + promote status in one save cycle
+    const progress = getProgress();
+    const en = fcWords[fcIndex].en;
+    if (!progress.words[en]) progress.words[en] = { status: 'new', lastSeen: 0, correct: 0, wrong: 0 };
+    progress.words[en].lastSeen = Date.now();
+    progress.words[en].wrong++;
+    progress.words[en].status = 'new';
+    progress.recentWords = progress.recentWords.filter(w => w.en !== en);
+    progress.recentWords.unshift({ en, zh: findWordZh(en), timestamp: Date.now() });
+    if (progress.recentWords.length > 20) progress.recentWords = progress.recentWords.slice(0, 20);
+    saveProgress(progress);
     playSound('wrong');
   }
   fcIndex++;
@@ -554,15 +590,21 @@ document.getElementById('fc-yes').addEventListener('click', () => {
   if (fcLocked) return;
   fcLocked = true;
   if (fcIndex < fcWords.length) {
-    // FIX #1: Use updateWordStatus - "know" promotes to learning/mastered
-    recordAnswer(fcWords[fcIndex].en, true);
+    // Combined: record answer + promote status in one save cycle
     const progress = getProgress();
-    const wordStatus = progress.words[fcWords[fcIndex].en];
-    if (wordStatus && wordStatus.correct >= 4) {
-      updateWordStatus(fcWords[fcIndex].en, 'mastered');
+    const en = fcWords[fcIndex].en;
+    if (!progress.words[en]) progress.words[en] = { status: 'new', lastSeen: 0, correct: 0, wrong: 0 };
+    progress.words[en].lastSeen = Date.now();
+    progress.words[en].correct++;
+    if (progress.words[en].correct >= 4) {
+      progress.words[en].status = 'mastered';
     } else {
-      updateWordStatus(fcWords[fcIndex].en, 'learning');
+      progress.words[en].status = 'learning';
     }
+    progress.recentWords = progress.recentWords.filter(w => w.en !== en);
+    progress.recentWords.unshift({ en, zh: findWordZh(en), timestamp: Date.now() });
+    if (progress.recentWords.length > 20) progress.recentWords = progress.recentWords.slice(0, 20);
+    saveProgress(progress);
     playSound('correct');
   }
   fcIndex++;
@@ -596,12 +638,20 @@ function initQuiz() {
   showQuizQuestion();
 }
 
-// FIX #3: Helper to get unique Chinese options for quiz
+// FIX #3: Helper to get unique Chinese options for quiz (deduplicated)
 function getUniqueZhOptions(correctWord, count) {
   const correctZh = correctWord.zh;
   const allWords = getAllWords().filter(w => w.en !== correctWord.en && w.zh !== correctZh);
   const shuffled = shuffle(allWords);
-  return shuffled.slice(0, count).map(w => w.zh);
+  const seen = new Set();
+  const result = [];
+  for (const w of shuffled) {
+    if (!seen.has(w.zh) && result.length < count) {
+      seen.add(w.zh);
+      result.push(w.zh);
+    }
+  }
+  return result;
 }
 
 function showQuizQuestion() {
@@ -754,6 +804,10 @@ function showSpellingQuestion() {
   input.value = '';
   input.disabled = false;
   document.getElementById('spelling-submit').disabled = false;
+  // FIX: Reset hint button style from previous question
+  const hintBtn = document.getElementById('spelling-hint-btn');
+  hintBtn.style.opacity = '';
+  hintBtn.style.pointerEvents = '';
   input.focus();
   const feedback = document.getElementById('spelling-feedback');
   feedback.dataset.attempts = '0';
@@ -955,11 +1009,12 @@ function flipMemCard(index) {
         }
       }, 400);
     } else {
-      // FIX #7: Record wrong answer for mismatched pairs
+      // FIX #7: Record wrong answer for mismatched pairs (both cards)
       setTimeout(() => {
         document.querySelector(`.memory-card[data-index="${i1}"]`).classList.remove('flipped');
         document.querySelector(`.memory-card[data-index="${i2}"]`).classList.remove('flipped');
         recordAnswer(card1.word.en, false);
+        recordAnswer(card2.word.en, false);
         memFlipped = [];
         memLocked = false;
       }, 800);

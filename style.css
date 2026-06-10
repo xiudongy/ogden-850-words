@@ -890,17 +890,18 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  padding: 6px 12px;
+  padding: 10px 16px;
   cursor: pointer;
   transition: var(--transition);
   border-radius: 12px;
   opacity: 0.45;
   color: var(--text-light);
+  min-height: 48px;
 }
 .nav-item.active { opacity: 1; color: var(--primary); }
 .nav-item.active .nav-icon { transform: scale(1.1); }
 .nav-icon { transition: var(--transition); width: 22px !important; height: 22px !important; }
-.nav-label { font-size: 0.65rem; font-weight: 700; }
+.nav-label { font-size: 0.72rem; font-weight: 700; }
 
 /* ===== Confetti Canvas ===== */
 #confetti-canvas {
