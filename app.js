@@ -270,6 +270,8 @@ function addStars(count) {
 // ===== Speech =====
 let preferredVoice = null;
 let speechSessionId = 0;
+let currentAudio = null;   // in-flight pre-recorded pronunciation clip
+let audioPrimed = false;   // mobile browsers block audio until the first user gesture
 
 function loadVoices() {
   if (!('speechSynthesis' in window)) return;
@@ -292,11 +294,42 @@ if ('speechSynthesis' in window) {
   speechSynthesis.addEventListener('voiceschanged', loadVoices);
 }
 
+// Primary path: play the pre-recorded high-quality clip (audio/<word>.m4a).
+// Falls back to the device TTS engine if the clip is missing or can't play.
 function speakWord(word, single, onDone) {
+  const done = () => { try { if (onDone) onDone(); } catch { /* ignore */ } };
+  if (!word) { done(); return; }
+  stopPronunciation(); // never let two cards talk over each other
+  const slug = word.toLowerCase().replace(/[^a-z]/g, '');
+  const src = `audio/${slug}.m4a`;
+  let fellBack = false;
+  const fallback = () => { if (fellBack) return; fellBack = true; ttsSpeak(word, single, onDone); };
+
+  const a = new Audio(src);
+  currentAudio = a;
+  try { a.preservesPitch = true; a.webkitPreservesPitch = true; } catch { /* ignore */ }
+  a.addEventListener('error', fallback, { once: true });
+  a.addEventListener('ended', () => {
+    if (single) { done(); return; }
+    // gentle slow repeat — same clip, pitch preserved so it doesn't sound chipmunk-y
+    const b = new Audio(src);
+    currentAudio = b;
+    try { b.preservesPitch = true; b.webkitPreservesPitch = true; } catch { /* ignore */ }
+    b.playbackRate = 0.75;
+    b.addEventListener('ended', done, { once: true });
+    b.addEventListener('error', done, { once: true });
+    b.play().catch(done);
+  }, { once: true });
+  a.play().catch(fallback);
+}
+
+// Device speech-synthesis fallback (also used when no clip exists).
+function ttsSpeak(word, single, onDone) {
   const done = () => { try { if (onDone) onDone(); } catch { /* ignore */ } };
   try {
     if (!('speechSynthesis' in window)) { done(); return; }
     window.speechSynthesis.cancel();
+    if (!preferredVoice) loadVoices(); // voices can load late on first play
     const sessionId = ++speechSessionId;
     const ended = () => { if (speechSessionId === sessionId) done(); };
 
@@ -308,7 +341,7 @@ function speakWord(word, single, onDone) {
     if (!single) {
       const u2 = new SpeechSynthesisUtterance(word);
       u2.lang = 'en-US';
-      u2.rate = 0.55;
+      u2.rate = 0.7;
       if (preferredVoice) u2.voice = preferredVoice;
       u2.onend = ended;
       u2.onerror = ended;
@@ -328,12 +361,40 @@ function speakWord(word, single, onDone) {
     window.speechSynthesis.speak(u1);
   } catch { done(); }
 }
-function stopSpeech() {
+
+function stopPronunciation() {
   speechSessionId++;
-  try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch {}
+  try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch { /* ignore */ }
+  if (currentAudio) { try { currentAudio.pause(); } catch { /* ignore */ } currentAudio = null; }
+}
+function stopSpeech() {
+  stopPronunciation();
   const sp = document.getElementById('fc-speak');
   if (sp) sp.classList.remove('playing');
 }
+
+// Unlock audio + speech on the first user gesture (iOS/Safari block both until then,
+// which would otherwise silently swallow the auto-play-once on the first card).
+function primeAudio() {
+  if (audioPrimed) return;
+  audioPrimed = true;
+  try { getAudioCtx().resume(); } catch { /* ignore */ }
+  loadVoices();
+  try {
+    if ('speechSynthesis' in window) {
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      window.speechSynthesis.speak(u);
+    }
+  } catch { /* ignore */ }
+  try {
+    const probe = new Audio('audio/go.m4a');
+    probe.volume = 0;
+    probe.play().then(() => { probe.pause(); probe.currentTime = 0; }).catch(() => {});
+  } catch { /* ignore */ }
+}
+['pointerdown', 'touchend', 'keydown'].forEach((evt) =>
+  window.addEventListener(evt, primeAudio, { once: true, passive: true }));
 
 // ===== Sound Effects =====
 let audioCtx = null;
