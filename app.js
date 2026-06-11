@@ -531,16 +531,36 @@ function mascotReaction(pct) {
   return pct >= 90 ? '🦊🎉' : pct >= 70 ? '🦊👍' : '🦊💪';
 }
 
-// ===== Levels (85 levels x 10 words, category order) =====
+// ===== Levels (85 levels x 10 words, mixed categories) =====
+// Each level blends all five categories proportionally (~5 general, 2-3
+// picturable, 1 operation, 1 quality) via a deterministic least-progress
+// round-robin, so kids always get concrete words alongside abstract ones.
 const LEVEL_SIZE = 10;
 let orderedWordsCache = null;
 function orderedWords() {
   if (!orderedWordsCache) orderedWordsCache = getAllWords();
   return orderedWordsCache;
 }
-function levelCount() { return Math.ceil(orderedWords().length / LEVEL_SIZE); }
+let levelSeqCache = null;
+function levelSequence() {
+  if (levelSeqCache) return levelSeqCache;
+  const cats = WORD_DATA.categories.map(c => ({ words: getWordsByCategory(c.id), i: 0 }));
+  const out = [];
+  const total = cats.reduce((s, c) => s + c.words.length, 0);
+  for (let n = 0; n < total; n++) {
+    let best = null;
+    for (const c of cats) {
+      if (c.i >= c.words.length) continue;
+      if (!best || c.i / c.words.length < best.i / best.words.length - 1e-9) best = c;
+    }
+    out.push(best.words[best.i++]);
+  }
+  levelSeqCache = out;
+  return out;
+}
+function levelCount() { return Math.ceil(levelSequence().length / LEVEL_SIZE); }
 function levelWords(idx) {
-  return orderedWords().slice(idx * LEVEL_SIZE, (idx + 1) * LEVEL_SIZE);
+  return levelSequence().slice(idx * LEVEL_SIZE, (idx + 1) * LEVEL_SIZE);
 }
 function levelStars(idx) {
   const p = getProgress();
@@ -561,50 +581,66 @@ function passedLevels() {
   return n;
 }
 
-// category boundaries in level units
-function levelBands() {
-  const bands = [];
-  let offset = 0;
-  WORD_DATA.categories.forEach(cat => {
-    const levels = Math.ceil(cat.words.length / LEVEL_SIZE);
-    bands.push({ cat, from: offset, to: offset + levels - 1 });
-    offset += levels;
-  });
-  return bands;
-}
+// Snake-path level map: rows of 4, alternating direction, chapter colours,
+// the fox stands on the current level, auto-scrolls into view.
+const CHAPTER_SIZE = 10;
+const CHAPTER_COLORS = ['#6C63FF', '#FF6584', '#10B981', '#F59E0B', '#0EA5E9', '#A78BFA', '#F472B6', '#34D399', '#FB923C'];
+const PATH_ROW = 4;
 
 function renderLevelMap() {
   const map = document.getElementById('level-map');
   if (!map) return;
-  const progress = getProgress();
   map.innerHTML = '';
   const cur = currentLevelIdx();
-  levelBands().forEach(band => {
+  const total = levelCount();
+  let currentNodeEl = null;
+
+  for (let ch = 0; ch * CHAPTER_SIZE < total; ch++) {
+    const from = ch * CHAPTER_SIZE;
+    const to = Math.min(total - 1, from + CHAPTER_SIZE - 1);
+    const color = CHAPTER_COLORS[ch % CHAPTER_COLORS.length];
+
     const head = document.createElement('div');
-    head.className = 'level-cat-band';
-    const catDone = isCategoryLearned(band.cat.id);
-    head.innerHTML = `<span class="band-dot" style="background:${band.cat.color}"></span>${band.cat.nameZh}${catDone ? '<span class="band-crown">👑</span>' : ''}`;
+    head.className = 'chapter-label';
+    head.innerHTML = `<span class="chapter-pill" style="background:${color}">第 ${ch + 1} 章</span><span class="chapter-range">第 ${from + 1} - ${to + 1} 关</span>`;
     map.appendChild(head);
-    for (let i = band.from; i <= band.to; i++) {
-      const stars = levelStars(i);
-      const unlocked = levelUnlocked(i);
-      const node = document.createElement('button');
-      const isCurrent = i === cur && unlocked;
-      node.className = 'level-node ' + (stars >= 1 ? 'done' : unlocked ? 'unlocked' : 'locked');
-      if (stars >= 1 || unlocked) node.style.background = band.cat.color;
-      if (isCurrent) node.style.boxShadow = `0 4px 14px ${band.cat.color}88`;
-      node.innerHTML = unlocked || stars >= 1
-        ? `<span>${i + 1}</span><span class="node-stars">${'★'.repeat(stars)}${'☆'.repeat(Math.max(0, 3 - stars)) }</span>`
-        : `<span>🔒</span>`;
-      if (unlocked) {
-        node.addEventListener('click', () => startLevel(i));
+
+    for (let rowStart = from; rowStart <= to; rowStart += PATH_ROW) {
+      const row = document.createElement('div');
+      const rowIdx = Math.floor((rowStart - from) / PATH_ROW);
+      row.className = 'level-path-row' + (rowIdx % 2 === 1 ? ' reversed' : '');
+      for (let i = rowStart; i <= Math.min(to, rowStart + PATH_ROW - 1); i++) {
+        const stars = levelStars(i);
+        const unlocked = levelUnlocked(i);
+        const isCurrent = i === cur && unlocked && stars < 1;
+        const node = document.createElement('button');
+        node.className = 'level-node ' + (isCurrent ? 'current' : stars >= 1 ? 'done' : unlocked ? 'unlocked' : 'locked');
+        if (stars >= 1 || unlocked) node.style.background = color;
+        if (isCurrent) {
+          node.style.boxShadow = `0 6px 18px ${color}77`;
+          node.innerHTML = `<span class="node-fox">🦊</span><span class="node-num">${i + 1}</span>`;
+          currentNodeEl = node;
+        } else if (stars >= 1) {
+          node.innerHTML = `<span class="node-num">${i + 1}</span><span class="node-stars">${'★'.repeat(stars)}</span>`;
+        } else {
+          node.innerHTML = `<span class="node-num">${i + 1}</span>`;
+        }
+        if (unlocked) node.addEventListener('click', () => startLevel(i));
+        row.appendChild(node);
       }
-      map.appendChild(node);
+      map.appendChild(row);
     }
-  });
+  }
+
   const sub = document.getElementById('levelmap-sub');
   if (sub) sub.textContent = `已通过 ${passedLevels()}/${levelCount()} 关`;
-  void progress;
+
+  // keep the kid's current position in view
+  if (currentNodeEl) {
+    requestAnimationFrame(() => {
+      map.scrollTop = Math.max(0, currentNodeEl.offsetTop - map.clientHeight / 2 + 30);
+    });
+  }
 }
 
 // ===== Mascot =====
