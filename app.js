@@ -292,11 +292,13 @@ if ('speechSynthesis' in window) {
   speechSynthesis.addEventListener('voiceschanged', loadVoices);
 }
 
-function speakWord(word, single) {
+function speakWord(word, single, onDone) {
+  const done = () => { try { if (onDone) onDone(); } catch { /* ignore */ } };
   try {
-    if (!('speechSynthesis' in window)) return;
+    if (!('speechSynthesis' in window)) { done(); return; }
     window.speechSynthesis.cancel();
     const sessionId = ++speechSessionId;
+    const ended = () => { if (speechSessionId === sessionId) done(); };
 
     const u1 = new SpeechSynthesisUtterance(word);
     u1.lang = 'en-US';
@@ -308,21 +310,29 @@ function speakWord(word, single) {
       u2.lang = 'en-US';
       u2.rate = 0.55;
       if (preferredVoice) u2.voice = preferredVoice;
+      u2.onend = ended;
+      u2.onerror = ended;
       u1.onend = () => {
         if (speechSessionId === sessionId) {
           setTimeout(() => {
             if (speechSessionId === sessionId) window.speechSynthesis.speak(u2);
+            else done();
           }, 500);
         }
       };
+      u1.onerror = ended;
+    } else {
+      u1.onend = ended;
+      u1.onerror = ended;
     }
-    u1.onerror = () => {};
     window.speechSynthesis.speak(u1);
-  } catch { /* ignore */ }
+  } catch { done(); }
 }
 function stopSpeech() {
   speechSessionId++;
   try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch {}
+  const sp = document.getElementById('fc-speak');
+  if (sp) sp.classList.remove('playing');
 }
 
 // ===== Sound Effects =====
@@ -1112,7 +1122,7 @@ function showFlashcard(immediate) {
     document.getElementById('flashcard-emoji').textContent = wordEmoji(word.en);
     document.getElementById('flashcard-counter').textContent = `${fcIndex + 1}/${fcWords.length}`;
     fcLocked = false;
-    speakWord(word.en);
+    fcSpeak(); // 默认自动播放一次
   };
 
   fcFlipped = false;
@@ -1183,11 +1193,16 @@ document.getElementById('flashcard-container').addEventListener('click', () => {
   playSound('flip');
 });
 
-// 朗读按钮：随时再听一遍发音（不触发翻卡）
+// 朗读：默认自动播放一次，点喇叭随时重听（不触发翻卡），播放时图标有动效反馈
+function fcSpeak() {
+  if (fcSessionDone || fcIndex >= fcWords.length) return;
+  const btn = document.getElementById('fc-speak');
+  if (btn) btn.classList.add('playing');
+  speakWord(fcWords[fcIndex].en, false, () => { if (btn) btn.classList.remove('playing'); });
+}
 document.getElementById('fc-speak').addEventListener('click', (e) => {
   e.stopPropagation();
-  if (fcSessionDone || fcIndex >= fcWords.length) return;
-  speakWord(fcWords[fcIndex].en);
+  fcSpeak();
 });
 
 function answerFlashcard(known) {
