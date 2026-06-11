@@ -581,11 +581,18 @@ function passedLevels() {
   return n;
 }
 
-// Snake-path level map: rows of 4, alternating direction, chapter colours,
-// the fox stands on the current level, auto-scrolls into view.
+// Winding-trail level map (Duolingo-style): one continuous SVG road,
+// nodes placed on a sine wave, chapter badges along the way, the fox
+// stands on the current level, auto-scrolls into view.
 const CHAPTER_SIZE = 10;
 const CHAPTER_COLORS = ['#6C63FF', '#FF6584', '#10B981', '#F59E0B', '#0EA5E9', '#A78BFA', '#F472B6', '#34D399', '#FB923C'];
-const PATH_ROW = 4;
+const STEP_Y = 78;        // vertical distance between nodes (px)
+const TOP_PAD = 56;
+const WAVE_X = [50, 73, 82, 73, 50, 27, 18, 27]; // x positions in %, period 8
+
+function nodeXY(i) {
+  return { x: WAVE_X[i % WAVE_X.length], y: TOP_PAD + i * STEP_Y };
+}
 
 function renderLevelMap() {
   const map = document.getElementById('level-map');
@@ -593,44 +600,77 @@ function renderLevelMap() {
   map.innerHTML = '';
   const cur = currentLevelIdx();
   const total = levelCount();
-  let currentNodeEl = null;
+  const height = TOP_PAD + (total - 1) * STEP_Y + 64;
 
-  for (let ch = 0; ch * CHAPTER_SIZE < total; ch++) {
-    const from = ch * CHAPTER_SIZE;
-    const to = Math.min(total - 1, from + CHAPTER_SIZE - 1);
-    const color = CHAPTER_COLORS[ch % CHAPTER_COLORS.length];
+  const inner = document.createElement('div');
+  inner.className = 'level-trail';
+  inner.style.height = height + 'px';
 
-    const head = document.createElement('div');
-    head.className = 'chapter-label';
-    head.innerHTML = `<span class="chapter-pill" style="background:${color}">第 ${ch + 1} 章</span><span class="chapter-range">第 ${from + 1} - ${to + 1} 关</span>`;
-    map.appendChild(head);
-
-    for (let rowStart = from; rowStart <= to; rowStart += PATH_ROW) {
-      const row = document.createElement('div');
-      const rowIdx = Math.floor((rowStart - from) / PATH_ROW);
-      row.className = 'level-path-row' + (rowIdx % 2 === 1 ? ' reversed' : '');
-      for (let i = rowStart; i <= Math.min(to, rowStart + PATH_ROW - 1); i++) {
-        const stars = levelStars(i);
-        const unlocked = levelUnlocked(i);
-        const isCurrent = i === cur && unlocked && stars < 1;
-        const node = document.createElement('button');
-        node.className = 'level-node ' + (isCurrent ? 'current' : stars >= 1 ? 'done' : unlocked ? 'unlocked' : 'locked');
-        if (stars >= 1 || unlocked) node.style.background = color;
-        if (isCurrent) {
-          node.style.boxShadow = `0 6px 18px ${color}77`;
-          node.innerHTML = `<span class="node-fox">🦊</span><span class="node-num">${i + 1}</span>`;
-          currentNodeEl = node;
-        } else if (stars >= 1) {
-          node.innerHTML = `<span class="node-num">${i + 1}</span><span class="node-stars">${'★'.repeat(stars)}</span>`;
-        } else {
-          node.innerHTML = `<span class="node-num">${i + 1}</span>`;
-        }
-        if (unlocked) node.addEventListener('click', () => startLevel(i));
-        row.appendChild(node);
-      }
-      map.appendChild(row);
+  // the road: one smooth curve through every node
+  let d = '';
+  for (let i = 0; i < total; i++) {
+    const { x, y } = nodeXY(i);
+    if (i === 0) {
+      d = `M ${x} ${y}`;
+    } else {
+      const p = nodeXY(i - 1);
+      const midY = (p.y + y) / 2;
+      d += ` C ${p.x} ${midY}, ${x} ${midY}, ${x} ${y}`;
     }
   }
+  inner.innerHTML = `
+    <svg class="trail-svg" viewBox="0 0 100 ${height}" preserveAspectRatio="none" aria-hidden="true">
+      <path d="${d}" fill="none" stroke="#E9E5FB" stroke-width="14" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+      <path d="${d}" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 14" vector-effect="non-scaling-stroke"/>
+    </svg>`;
+
+  let currentNodeEl = null;
+  for (let i = 0; i < total; i++) {
+    const { x, y } = nodeXY(i);
+    const ch = Math.floor(i / CHAPTER_SIZE);
+    const color = CHAPTER_COLORS[ch % CHAPTER_COLORS.length];
+
+    // chapter badge floats on the side opposite the road
+    if (i % CHAPTER_SIZE === 0) {
+      const chip = document.createElement('div');
+      chip.className = 'chapter-chip';
+      chip.style.top = (y - 14) + 'px';
+      if (x >= 50) { chip.style.left = '6%'; } else { chip.style.right = '6%'; }
+      chip.innerHTML = `<span class="chapter-pill" style="background:${color}">第 ${ch + 1} 章</span>`;
+      inner.appendChild(chip);
+    }
+
+    const stars = levelStars(i);
+    const unlocked = levelUnlocked(i);
+    const isCurrent = i === cur && unlocked && stars < 1;
+    const node = document.createElement('button');
+    node.className = 'level-node ' + (isCurrent ? 'current' : stars >= 1 ? 'done' : unlocked ? 'unlocked' : 'locked');
+    node.style.left = x + '%';
+    node.style.top = y + 'px';
+    if (stars >= 1 || unlocked) node.style.background = color;
+    if (isCurrent) {
+      node.style.boxShadow = `0 6px 18px ${color}77`;
+      node.innerHTML = `<span class="node-fox">🦊</span><span class="node-num">${i + 1}</span>`;
+      currentNodeEl = node;
+    } else if (stars >= 1) {
+      node.innerHTML = `<span class="node-num">${i + 1}</span><span class="node-stars">${'★'.repeat(stars)}</span>`;
+    } else {
+      node.innerHTML = `<span class="node-num">${i + 1}</span>`;
+    }
+    if (unlocked) node.addEventListener('click', () => startLevel(i));
+    inner.appendChild(node);
+  }
+
+  // finish flag at the end of the trail
+  const goal = document.createElement('div');
+  goal.className = 'trail-goal';
+  const last = nodeXY(total - 1);
+  goal.style.left = last.x + '%';
+  goal.style.top = (last.y + 52) + 'px';
+  goal.textContent = '🏆';
+  inner.appendChild(goal);
+
+  map.appendChild(inner);
 
   const sub = document.getElementById('levelmap-sub');
   if (sub) sub.textContent = `已通过 ${passedLevels()}/${levelCount()} 关`;

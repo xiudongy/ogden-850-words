@@ -1,6 +1,6 @@
 // Service worker: cache-first for the fully static app shell.
 // Bump CACHE_VERSION whenever any cached file changes.
-const CACHE_VERSION = 'wordfun-v2';
+const CACHE_VERSION = 'wordfun-v3';
 const ASSETS = [
   './',
   './index.html',
