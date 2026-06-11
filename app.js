@@ -1116,7 +1116,7 @@ function showFlashcard(immediate) {
   };
 
   fcFlipped = false;
-  fcSetButtons(false);
+  fcSetButtons(true); // 不强制翻卡：认识就能直接评价，翻卡只是为了核对答案
   const card = document.getElementById('flashcard');
   if (card.classList.contains('flipped')) {
     // flip back first, then swap the text so the next answer isn't spoiled
@@ -1181,7 +1181,13 @@ document.getElementById('flashcard-container').addEventListener('click', () => {
   fcFlipped = !fcFlipped;
   document.getElementById('flashcard').classList.toggle('flipped');
   playSound('flip');
-  if (fcFlipped) fcSetButtons(true);
+});
+
+// 朗读按钮：随时再听一遍发音（不触发翻卡）
+document.getElementById('fc-speak').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (fcSessionDone || fcIndex >= fcWords.length) return;
+  speakWord(fcWords[fcIndex].en);
 });
 
 function answerFlashcard(known) {
@@ -1952,7 +1958,7 @@ function refreshProgressPage() {
     });
     const practice = document.createElement('button');
     practice.className = 'weak-practice-btn';
-    practice.textContent = '🔁 专练这些词';
+    practice.innerHTML = `${icon('repeat', 18)} 专练这些词`;
     practice.addEventListener('click', () => {
       navigateTo('flashcard');
       initFlashcard({ words: weak.map(x => x.w) });
@@ -2201,11 +2207,11 @@ function renderShop() {
     if (item.type === 'consumable') {
       btnHtml = `<button class="si-btn" ${canAfford ? '' : 'disabled'}>⭐${item.cost} 买一张${p.repairCards > 0 ? `（有${p.repairCards}张）` : ''}</button>`;
     } else if (isActiveTheme) {
-      btnHtml = `<button class="si-btn active-theme">使用中 ✓</button>`;
+      btnHtml = `<button class="si-btn active-theme">使用中 ${icon('check', 16)}</button>`;
     } else if (owned && item.type === 'theme') {
       btnHtml = `<button class="si-btn owned">用这个</button>`;
     } else if (owned) {
-      btnHtml = `<button class="si-btn owned">已拥有 ✓</button>`;
+      btnHtml = `<button class="si-btn owned">已拥有 ${icon('check', 16)}</button>`;
     } else {
       btnHtml = `<button class="si-btn" ${canAfford ? '' : 'disabled'}>⭐${item.cost} 兑换</button>`;
     }
