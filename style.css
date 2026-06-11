@@ -301,20 +301,40 @@ svg.icon-lg { width: 28px; height: 28px; }
   background: var(--card);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
-  max-height: 440px;
+  max-height: 460px;
   overflow-y: auto;
   scroll-behavior: smooth;
+  overscroll-behavior: contain;
 }
 .level-trail {
   position: relative;
   width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+.zone-bands { position: absolute; inset: 0; }
+.zone-band {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  border-radius: 24px;
 }
 .trail-svg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  filter: drop-shadow(0 2px 2px rgba(108, 99, 255, 0.10));
 }
+.trail-deco {
+  position: absolute;
+  transform: translate(-50%, -50%) rotate(-4deg);
+  font-size: 1.35rem;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.08));
+}
+.trail-deco:nth-child(even) { transform: translate(-50%, -50%) rotate(5deg); font-size: 1.15rem; }
 .chapter-chip {
   position: absolute;
   z-index: 2;
@@ -323,16 +343,16 @@ svg.icon-lg { width: 28px; height: 28px; }
   color: white;
   font-size: var(--fs-xs);
   font-weight: 800;
-  padding: 5px 14px;
+  padding: 6px 14px;
   border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.16);
   white-space: nowrap;
 }
 .trail-goal {
   position: absolute;
   transform: translate(-50%, -50%);
-  font-size: 2rem;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+  font-size: 2.4rem;
+  filter: drop-shadow(0 3px 5px rgba(0,0,0,0.18));
   z-index: 1;
 }
 .level-node {
@@ -352,36 +372,46 @@ svg.icon-lg { width: 28px; height: 28px; }
   cursor: pointer;
   transition: box-shadow var(--transition), background var(--transition);
   color: white;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.14), inset 0 -3px 0 rgba(0,0,0,0.14);
+  /* pressed-button look: lifted face + darker rim at the bottom */
+  box-shadow: 0 4px 10px rgba(0,0,0,0.16), inset 0 -4px 0 rgba(0,0,0,0.18), inset 0 2px 0 rgba(255,255,255,0.28);
 }
 .level-node:active { transform: translate(-50%, -50%) scale(0.92); }
-.level-node .node-num { line-height: 1.1; }
+.level-node .node-num { line-height: 1.1; text-shadow: 0 1px 2px rgba(0,0,0,0.18); }
 .level-node .node-stars {
   font-size: 9px;
   letter-spacing: -0.5px;
   line-height: 1;
-  color: #FDE68A;
+  color: #FFE38A;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.25);
+}
+.level-node .node-boss {
+  position: absolute;
+  top: -9px;
+  right: -7px;
+  font-size: 1rem;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
 }
 .level-node.locked {
-  background: #ECEAF7;
-  color: #A6A1C8;
+  background: #FFFFFF;
+  color: #8B85B5;
   cursor: default;
-  box-shadow: none;
+  box-shadow: inset 0 0 0 3px #E9E4FA;
   width: 42px;
   height: 42px;
   font-size: var(--fs-sm);
 }
+.level-node.locked .node-num { text-shadow: none; }
 .level-node.unlocked { animation: nodePulse 2s ease infinite; }
 .level-node.current {
-  width: 64px;
-  height: 64px;
-  font-size: 1.1rem;
+  width: 66px;
+  height: 66px;
+  font-size: 1.15rem;
   animation: nodePulse 2s ease infinite;
 }
 .level-node .node-fox {
   position: absolute;
-  top: -24px;
-  font-size: 1.4rem;
+  top: -26px;
+  font-size: 1.5rem;
   animation: foxBounce 1.2s ease infinite;
   filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));
 }
@@ -393,7 +423,12 @@ svg.icon-lg { width: 28px; height: 28px; }
   0%, 100% { transform: translate(-50%, -50%) scale(1); }
   50% { transform: translate(-50%, -50%) scale(1.06); }
 }
-.level-node.done { opacity: 0.95; }
+.level-node.done { opacity: 0.97; }
+@media (prefers-reduced-motion: reduce) {
+  .level-node.unlocked, .level-node.current { animation: none; }
+  .level-node .node-fox { animation: none; }
+  .level-map { scroll-behavior: auto; }
+}
 
 /* ===== Mode Grid ===== */
 .mode-grid {

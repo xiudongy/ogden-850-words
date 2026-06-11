@@ -581,17 +581,45 @@ function passedLevels() {
   return n;
 }
 
-// Winding-trail level map (Duolingo-style): one continuous SVG road,
-// nodes placed on a sine wave, chapter badges along the way, the fox
-// stands on the current level, auto-scrolls into view.
+// "奇奇的环游冒险" level map: one continuous road through 9 themed
+// landscape zones. The travelled stretch is painted gold, scenery
+// stickers line the way, the fox stands on the current level.
 const CHAPTER_SIZE = 10;
-const CHAPTER_COLORS = ['#6C63FF', '#FF6584', '#10B981', '#F59E0B', '#0EA5E9', '#A78BFA', '#F472B6', '#34D399', '#FB923C'];
 const STEP_Y = 78;        // vertical distance between nodes (px)
-const TOP_PAD = 56;
+const TOP_PAD = 64;
 const WAVE_X = [50, 73, 82, 73, 50, 27, 18, 27]; // x positions in %, period 8
+
+// deep = node fill (white bold text >= 3:1), soft = zone wash
+const ZONES = [
+  { name: '青青草原', deep: '#16A34A', soft: '#E8F9EE', deco: ['🌼', '🐰', '🌳'] },
+  { name: '蘑菇森林', deep: '#047857', soft: '#E2F5EC', deco: ['🍄', '🌲', '🦉'] },
+  { name: '花海溪谷', deep: '#DB2777', soft: '#FDEDF4', deco: ['🌸', '🦋', '🌷'] },
+  { name: '金色沙滩', deep: '#D97706', soft: '#FDF3DF', deco: ['🐚', '🦀', '⛱️'] },
+  { name: '蓝色海洋', deep: '#0284C7', soft: '#E6F4FC', deco: ['🐬', '🐠', '🌊'] },
+  { name: '彩虹山丘', deep: '#7C3AED', soft: '#F1EBFD', deco: ['🌈', '🪁', '⛰️'] },
+  { name: '冰雪雪山', deep: '#0369A1', soft: '#E8F3FA', deco: ['⛄', '❄️', '🏔️'] },
+  { name: '星空夜原', deep: '#4F46E5', soft: '#ECEBFC', deco: ['🌙', '⭐', '✨'] },
+  { name: '云端城堡', deep: '#BE185D', soft: '#FDEDF2', deco: ['☁️', '🎈', '👑'] }
+];
+function zoneOf(level) { return ZONES[Math.floor(level / CHAPTER_SIZE) % ZONES.length]; }
 
 function nodeXY(i) {
   return { x: WAVE_X[i % WAVE_X.length], y: TOP_PAD + i * STEP_Y };
+}
+
+function trailPathD(from, to) {
+  let d = '';
+  for (let i = from; i <= to; i++) {
+    const { x, y } = nodeXY(i);
+    if (i === from) {
+      d = `M ${x} ${y}`;
+    } else {
+      const p = nodeXY(i - 1);
+      const midY = (p.y + y) / 2;
+      d += ` C ${p.x} ${midY}, ${x} ${midY}, ${x} ${y}`;
+    }
+  }
+  return d;
 }
 
 function renderLevelMap() {
@@ -600,74 +628,106 @@ function renderLevelMap() {
   map.innerHTML = '';
   const cur = currentLevelIdx();
   const total = levelCount();
-  const height = TOP_PAD + (total - 1) * STEP_Y + 64;
+  const height = TOP_PAD + (total - 1) * STEP_Y + 96;
+  const travelled = passedLevels() > 0 ? Math.min(cur, total - 1) : 0;
 
   const inner = document.createElement('div');
   inner.className = 'level-trail';
   inner.style.height = height + 'px';
 
-  // the road: one smooth curve through every node
-  let d = '';
-  for (let i = 0; i < total; i++) {
-    const { x, y } = nodeXY(i);
-    if (i === 0) {
-      d = `M ${x} ${y}`;
-    } else {
-      const p = nodeXY(i - 1);
-      const midY = (p.y + y) / 2;
-      d += ` C ${p.x} ${midY}, ${x} ${midY}, ${x} ${y}`;
-    }
+  // landscape washes, one per zone, behind everything
+  let bandsHtml = '';
+  for (let ch = 0; ch * CHAPTER_SIZE < total; ch++) {
+    const zone = ZONES[ch % ZONES.length];
+    const from = ch * CHAPTER_SIZE;
+    const count = Math.min(CHAPTER_SIZE, total - from);
+    const top = nodeXY(from).y - 46;
+    const bandH = count * STEP_Y + (ch * CHAPTER_SIZE + count >= total ? 80 : 0);
+    bandsHtml += `<div class="zone-band" style="top:${top}px;height:${bandH - 8}px;background:${zone.soft}"></div>`;
   }
+
+  // the road: pale base, gold travelled stretch, dotted centerlines
+  const dAll = trailPathD(0, total - 1);
+  const dDone = travelled > 0 ? trailPathD(0, travelled) : '';
   inner.innerHTML = `
+    <div class="zone-bands">${bandsHtml}</div>
     <svg class="trail-svg" viewBox="0 0 100 ${height}" preserveAspectRatio="none" aria-hidden="true">
-      <path d="${d}" fill="none" stroke="#E9E5FB" stroke-width="14" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
-      <path d="${d}" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 14" vector-effect="non-scaling-stroke"/>
+      <path d="${dAll}" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+      <path d="${dAll}" fill="none" stroke="#E4DEF8" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 13" vector-effect="non-scaling-stroke"/>
+      ${dDone ? `<path d="${dDone}" fill="none" stroke="#F59E0B" stroke-width="18" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+      <path d="${dDone}" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 13" vector-effect="non-scaling-stroke"/>` : ''}
     </svg>`;
+
+  // scenery stickers: deterministic spots on the side opposite the road
+  for (let ch = 0; ch * CHAPTER_SIZE < total; ch++) {
+    const zone = ZONES[ch % ZONES.length];
+    zone.deco.forEach((emoji, k) => {
+      const idx = ch * CHAPTER_SIZE + 1 + k * 3;
+      if (idx >= total) return;
+      const { x, y } = nodeXY(idx);
+      const deco = document.createElement('span');
+      deco.className = 'trail-deco';
+      deco.textContent = emoji;
+      deco.style.left = Math.max(8, Math.min(92, 100 - x + (k % 2 ? 6 : -6))) + '%';
+      deco.style.top = (y + 26) + 'px';
+      inner.appendChild(deco);
+    });
+  }
 
   let currentNodeEl = null;
   for (let i = 0; i < total; i++) {
     const { x, y } = nodeXY(i);
     const ch = Math.floor(i / CHAPTER_SIZE);
-    const color = CHAPTER_COLORS[ch % CHAPTER_COLORS.length];
+    const zone = ZONES[ch % ZONES.length];
 
-    // chapter badge floats on the side opposite the road
+    // zone badge floats on the side opposite the road
     if (i % CHAPTER_SIZE === 0) {
       const chip = document.createElement('div');
       chip.className = 'chapter-chip';
-      chip.style.top = (y - 14) + 'px';
-      if (x >= 50) { chip.style.left = '6%'; } else { chip.style.right = '6%'; }
-      chip.innerHTML = `<span class="chapter-pill" style="background:${color}">第 ${ch + 1} 章</span>`;
+      chip.style.top = (y - 18) + 'px';
+      if (x >= 50) { chip.style.left = '5%'; } else { chip.style.right = '5%'; }
+      chip.innerHTML = `<span class="chapter-pill" style="background:${zone.deep}">第${ch + 1}章 · ${zone.name}</span>`;
       inner.appendChild(chip);
     }
 
     const stars = levelStars(i);
     const unlocked = levelUnlocked(i);
     const isCurrent = i === cur && unlocked && stars < 1;
+    const isBoss = i % CHAPTER_SIZE === CHAPTER_SIZE - 1 || i === total - 1; // chapter finale
     const node = document.createElement('button');
     node.className = 'level-node ' + (isCurrent ? 'current' : stars >= 1 ? 'done' : unlocked ? 'unlocked' : 'locked');
     node.style.left = x + '%';
     node.style.top = y + 'px';
-    if (stars >= 1 || unlocked) node.style.background = color;
+    if (stars >= 1 || unlocked) node.style.background = zone.deep;
     if (isCurrent) {
-      node.style.boxShadow = `0 6px 18px ${color}77`;
+      node.style.boxShadow = `0 0 0 4px #FFFFFF, 0 6px 18px ${zone.deep}66`;
       node.innerHTML = `<span class="node-fox">🦊</span><span class="node-num">${i + 1}</span>`;
+      node.setAttribute('aria-label', `第${i + 1}关，当前位置，点击开始`);
       currentNodeEl = node;
     } else if (stars >= 1) {
       node.innerHTML = `<span class="node-num">${i + 1}</span><span class="node-stars">${'★'.repeat(stars)}</span>`;
+      node.setAttribute('aria-label', `第${i + 1}关，已通过 ${stars} 星`);
     } else {
       node.innerHTML = `<span class="node-num">${i + 1}</span>`;
+      node.setAttribute('aria-label', `第${i + 1}关${unlocked ? '' : '，未解锁'}`);
+    }
+    if (isBoss) {
+      const badge = document.createElement('span');
+      badge.className = 'node-boss';
+      badge.textContent = stars >= 1 ? '👑' : '🎁';
+      node.appendChild(badge);
     }
     if (unlocked) node.addEventListener('click', () => startLevel(i));
     inner.appendChild(node);
   }
 
-  // finish flag at the end of the trail
+  // journey ends at the cloud castle
+  const last = nodeXY(total - 1);
   const goal = document.createElement('div');
   goal.className = 'trail-goal';
-  const last = nodeXY(total - 1);
   goal.style.left = last.x + '%';
-  goal.style.top = (last.y + 52) + 'px';
-  goal.textContent = '🏆';
+  goal.style.top = (last.y + 58) + 'px';
+  goal.innerHTML = '🏰';
   inner.appendChild(goal);
 
   map.appendChild(inner);
