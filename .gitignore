@@ -1,2 +1,5 @@
 # Local Claude Code settings — not for public repo
 .claude/
+
+# Cloudflare Wrangler local build cache (contains account id, not for repo)
+.wrangler/
