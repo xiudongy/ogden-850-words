@@ -1419,13 +1419,23 @@ document.addEventListener('click', (e) => {
   if (speakBtn) speakWord(speakBtn.dataset.word);
 });
 
+const QUIZ_OPTION_KEYS = ['A', 'B', 'C', 'D'];
+
 function renderQuizOptions(options, correctAnswer, word) {
   const container = document.getElementById('quiz-options');
   container.innerHTML = '';
-  options.forEach(opt => {
+  options.forEach((opt, i) => {
     const btn = document.createElement('button');
     btn.className = 'quiz-option';
-    btn.textContent = opt;
+    const key = QUIZ_OPTION_KEYS[i] || '';
+    btn.dataset.key = key;
+    const keySpan = document.createElement('span');
+    keySpan.className = 'quiz-option-key';
+    keySpan.textContent = key;
+    const textSpan = document.createElement('span');
+    textSpan.className = 'quiz-option-text';
+    textSpan.textContent = opt;
+    btn.append(keySpan, textSpan);
     btn.addEventListener('click', () => {
       if (quizAnswered) return;
       quizAnswered = true;
@@ -1446,7 +1456,7 @@ function renderQuizOptions(options, correctAnswer, word) {
       } else {
         btn.classList.add('wrong');
         container.querySelectorAll('.quiz-option').forEach(b => {
-          if (b.textContent === correctAnswer) b.classList.add('correct');
+          if (b.querySelector('.quiz-option-text')?.textContent === correctAnswer) b.classList.add('correct');
         });
         playSound('wrong');
         recordResult(word.en, false, 'quiz');
@@ -1465,6 +1475,24 @@ document.getElementById('quiz-continue').addEventListener('click', () => {
   document.getElementById('quiz-continue').style.display = 'none';
   quizIndex++;
   showQuizQuestion();
+});
+
+// A/B/C/D keyboard shortcuts on the quiz page
+document.addEventListener('keydown', (e) => {
+  if (currentPage !== 'quiz') return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const target = e.target;
+  if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+  const key = e.key.toUpperCase();
+  if (key === 'ENTER' || key === ' ') {
+    const cont = document.getElementById('quiz-continue');
+    if (cont && cont.style.display !== 'none') { e.preventDefault(); cont.click(); }
+    return;
+  }
+  if (!QUIZ_OPTION_KEYS.includes(key)) return;
+  if (quizAnswered) return;
+  const btn = document.querySelector(`.quiz-option[data-key="${key}"]`);
+  if (btn) { e.preventDefault(); btn.click(); }
 });
 
 function showQuizResult() {

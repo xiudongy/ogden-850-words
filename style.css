@@ -879,15 +879,34 @@ svg.icon-lg { width: 28px; height: 28px; }
   background: var(--card);
   border: 2px solid var(--primary-pale);
   border-radius: var(--radius-md);
-  padding: 14px 10px;
+  padding: 14px 12px;
   font-size: var(--fs-md);
   font-weight: 700;
   cursor: pointer;
   transition: var(--transition);
-  text-align: center;
+  text-align: left;
   color: var(--text);
   min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
+.quiz-option-key {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--primary-pale);
+  color: var(--primary);
+  font-size: 0.95rem;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.quiz-option-text { flex: 1 1 auto; text-align: center; }
+.quiz-option.correct .quiz-option-key { background: #fff; color: var(--success); }
+.quiz-option.wrong .quiz-option-key { background: #fff; color: var(--danger); }
 @media (hover: hover) { .quiz-option:hover { border-color: var(--primary); background: #F5F3FF; } }
 .quiz-option:active { transform: scale(0.97); }
 .quiz-option.correct {
