@@ -1054,39 +1054,114 @@ svg.icon-lg { width: 28px; height: 28px; }
   font-weight: 700;
   min-height: 22px;
 }
-.spelling-input-area {
-  display: flex;
-  gap: 8px;
+/* type.review-style letter cells: a transparent <input> layered over rendered boxes */
+.spelling-type {
+  position: relative;
   width: 100%;
 }
-.spelling-input-area input {
-  flex: 1;
-  min-width: 0;
-  padding: 14px 16px;
-  border: 2px solid var(--primary-pale);
-  border-radius: var(--radius-md);
-  font-size: 1.1rem;
-  font-weight: 700;
-  font-family: inherit;
-  outline: none;
-  transition: var(--transition);
-  text-align: center;
-  min-height: 52px;
+.letter-cells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  align-items: flex-end;
+  min-height: 58px;
+  padding: 6px 4px;
 }
-.spelling-input-area input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.1); }
-.spelling-submit {
+.letter-cells .cell {
+  width: clamp(28px, 7.5vw, 40px);
+  height: 50px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid var(--primary-pale);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.85rem;
+  font-weight: 900;
+  color: var(--primary);
+  text-transform: lowercase;
+  transition: transform 0.12s ease, color 0.18s, border-color 0.18s;
+}
+.letter-cells .cell.filled { border-bottom-color: var(--primary); }
+.letter-cells .cell.pop { animation: cellPop 0.18s ease; }
+.letter-cells .cell.current { border-bottom-color: var(--primary); }
+.letter-cells .cell.current::after {
+  content: '';
+  width: 2.5px;
+  height: 44%;
   background: var(--primary);
+  border-radius: 2px;
+  animation: caretBlink 1.05s ease-in-out infinite;
+}
+.letter-cells .cell.overflow {
+  border-bottom-color: var(--danger);
+  color: var(--danger);
+}
+.letter-cells.shake { animation: shakeX 0.4s ease; }
+.letter-cells.win .cell {
+  color: var(--success);
+  border-bottom-color: var(--success);
+  animation: cellWin 0.45s ease;
+}
+@keyframes cellPop {
+  0% { transform: scale(0.5); }
+  55% { transform: scale(1.16); }
+  100% { transform: scale(1); }
+}
+@keyframes cellWin {
+  0%, 100% { transform: translateY(0); }
+  45% { transform: translateY(-9px); }
+}
+@keyframes caretBlink {
+  0%, 40% { opacity: 1; }
+  50%, 90% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes shakeX {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-9px); }
+  40% { transform: translateX(9px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(6px); }
+}
+#spelling-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: transparent;
+  caret-color: transparent;
+  font-size: 16px; /* >=16px stops iOS auto-zoom on focus */
+  text-align: center;
+  cursor: text;
+}
+.spelling-submit {
+  align-self: center;
+  background: linear-gradient(135deg, var(--primary), #8b80ff);
   color: white;
   border: none;
-  padding: 14px 20px;
-  border-radius: var(--radius-md);
+  min-width: 180px;
+  padding: 13px 40px;
+  border-radius: 999px;
   font-size: var(--fs-md);
   font-weight: 800;
   cursor: pointer;
   transition: var(--transition);
-  min-height: 52px;
+  box-shadow: 0 6px 16px rgba(108, 99, 255, 0.28);
 }
 .spelling-submit:active { transform: scale(0.95); }
+.spelling-submit.ready { animation: submitPulse 1.1s ease infinite; }
+@keyframes submitPulse {
+  0%, 100% { box-shadow: 0 6px 16px rgba(108, 99, 255, 0.28); transform: scale(1); }
+  50% { box-shadow: 0 6px 22px rgba(108, 99, 255, 0.55); transform: scale(1.03); }
+}
 
 .spelling-feedback {
   width: 100%;

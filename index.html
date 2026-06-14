@@ -265,10 +265,11 @@
           </button>
           <div class="spelling-hint-text" id="spelling-hint-text"></div>
         </div>
-        <div class="spelling-input-area">
-          <input type="text" id="spelling-input" placeholder="输入英文..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text">
-          <button class="spelling-submit" id="spelling-submit">确认</button>
+        <div class="spelling-type" id="spelling-type">
+          <div class="letter-cells" id="spelling-cells"></div>
+          <input type="text" id="spelling-input" aria-label="拼写输入" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text">
         </div>
+        <button class="spelling-submit" id="spelling-submit">确认</button>
         <div class="spelling-feedback" id="spelling-feedback"></div>
         <button class="hint-btn" id="spelling-hint-btn">
           <i data-lucide="lightbulb" class="icon-sm"></i> 提示

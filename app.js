@@ -471,6 +471,53 @@ document.addEventListener('visibilitychange', () => {
     audioCtx.resume().catch(() => {});
   }
 });
+
+// Mechanical keystroke click: a tiny filtered white-noise burst — a tone sounds
+// synthetic, but band-passed noise reads as a real key "snap". Buffer is reused.
+let keyNoiseBuf = null;
+function getKeyNoise(ctx) {
+  if (keyNoiseBuf) return keyNoiseBuf;
+  const len = Math.floor(ctx.sampleRate * 0.03);
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) {
+    const decay = Math.pow(1 - i / len, 2); // sharp percussive tail
+    data[i] = (Math.random() * 2 - 1) * decay;
+  }
+  keyNoiseBuf = buf;
+  return buf;
+}
+function playKeyClick(isPress) {
+  try {
+    const ctx = getAudioCtx();
+    if (ctx.state !== 'running') ctx.resume();
+    const t = ctx.currentTime;
+
+    // Layer 1 — the high "click" (noise burst through a high-pass)
+    const src = ctx.createBufferSource();
+    src.buffer = getKeyNoise(ctx);
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = isPress ? 1200 : 900;
+    const clickGain = ctx.createGain();
+    clickGain.gain.setValueAtTime(isPress ? 0.5 : 0.32, t);
+    clickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+    src.connect(hp); hp.connect(clickGain); clickGain.connect(ctx.destination);
+    src.start(t); src.stop(t + 0.04);
+
+    // Layer 2 — the low "thock" body (short sine), slightly pitch-varied per key
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    const f = (isPress ? 175 : 130) + (Math.random() * 24 - 12);
+    osc.frequency.setValueAtTime(f, t);
+    osc.frequency.exponentialRampToValueAtTime(f * 0.6, t + 0.05);
+    const body = ctx.createGain();
+    body.gain.setValueAtTime(isPress ? 0.32 : 0.22, t);
+    body.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+    osc.connect(body); body.connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.07);
+  } catch { /* ignore */ }
+}
 function vibrate(ms) {
   try { if (navigator.vibrate) navigator.vibrate(ms); } catch {}
 }
@@ -1618,6 +1665,64 @@ let spellingRetype = false;
 let spellingWrongWords = [];
 let spellingSessionDone = true;
 let spellingListenMode = false;
+let spellingPrevLen = 0;
+
+// Render the letter cells from the current input value. Cells = max(word length,
+// chars typed) so the row always reveals the target length (a gentle scaffold)
+// but never reveals which letters are right — that's still checked only on submit.
+function renderSpellingCells(justFilledIndex) {
+  const cellsEl = document.getElementById('spelling-cells');
+  const word = spellingWords[spellingIndex];
+  if (!word) { cellsEl.innerHTML = ''; return; }
+  const val = document.getElementById('spelling-input').value;
+  const targetLen = word.en.length;
+  const n = Math.max(targetLen, val.length);
+
+  // reconcile cell count in place — never rebuild the row, or every existing
+  // letter would replay its pop animation on each keystroke (the jank)
+  while (cellsEl.children.length < n) {
+    const s = document.createElement('span');
+    s.className = 'cell';
+    cellsEl.appendChild(s);
+  }
+  while (cellsEl.children.length > n) cellsEl.removeChild(cellsEl.lastChild);
+
+  for (let i = 0; i < n; i++) {
+    const cell = cellsEl.children[i];
+    const ch = val[i];
+    const filled = ch !== undefined;
+    const text = filled ? ch : '';
+    if (cell.textContent !== text) cell.textContent = text;
+    cell.classList.toggle('filled', filled);
+    cell.classList.toggle('current', !filled && i === val.length);
+    cell.classList.toggle('overflow', filled && i >= targetLen); // typed past the word
+  }
+
+  // one-shot pop on only the cell that just received a letter
+  const popCell = justFilledIndex != null && cellsEl.children[justFilledIndex];
+  if (popCell) { popCell.classList.remove('pop'); void popCell.offsetWidth; popCell.classList.add('pop'); }
+
+  // invite a check once the row is exactly full (common case, no overflow)
+  document.getElementById('spelling-submit').classList.toggle(
+    'ready', val.length === targetLen && !spellingAnswered
+  );
+}
+
+// Set the input value programmatically and keep the cells + keystroke state in sync.
+function setSpellingValue(val) {
+  document.getElementById('spelling-input').value = val;
+  spellingPrevLen = val.length;
+  renderSpellingCells();
+}
+
+// Replay the shake animation (must drop + re-add the class to restart it).
+function flashSpellingShake() {
+  const cells = document.getElementById('spelling-cells');
+  cells.classList.remove('shake');
+  void cells.offsetWidth;
+  cells.classList.add('shake');
+  vibrate(60);
+}
 
 function initSpelling(opts) {
   opts = opts || {};
@@ -1679,8 +1784,9 @@ function showSpellingQuestion() {
   document.getElementById('spelling-feedback').textContent = '';
   document.getElementById('spelling-feedback').className = 'spelling-feedback';
   const input = document.getElementById('spelling-input');
-  input.value = '';
   input.disabled = false;
+  setSpellingValue('');
+  document.getElementById('spelling-cells').classList.remove('shake', 'win');
   document.getElementById('spelling-submit').disabled = false;
   const hintBtn = document.getElementById('spelling-hint-btn');
   hintBtn.style.opacity = '';
@@ -1727,7 +1833,8 @@ function checkSpelling() {
     } else {
       feedback.innerHTML = `再仔细看一眼：<strong>${word.en}</strong>`;
       feedback.className = 'spelling-feedback wrong';
-      inputEl.value = '';
+      setSpellingValue('');
+      flashSpellingShake();
       inputEl.focus();
     }
     refreshIcons();
@@ -1740,6 +1847,9 @@ function checkSpelling() {
     document.getElementById('spelling-score').textContent = spellingScore;
     feedback.innerHTML = `${icon('circle-check', 16)} 拼对啦！`;
     feedback.className = 'spelling-feedback correct';
+    const cellsEl = document.getElementById('spelling-cells');
+    cellsEl.classList.add('win');
+    document.getElementById('spelling-submit').classList.remove('ready');
     playSound('correct');
     vibrate(40);
     // hints make it easier — a hinted word doesn't move toward "mastered"
@@ -1763,11 +1873,13 @@ function checkSpelling() {
       feedback.className = 'spelling-feedback wrong';
       speakWord(word.en, true);
       spellingRetype = true;
-      inputEl.value = '';
+      setSpellingValue('');
+      flashSpellingShake();
       inputEl.focus();
     } else {
       feedback.innerHTML = `${icon('circle-x', 16)} 差一点，再试一次！`;
       feedback.className = 'spelling-feedback wrong';
+      flashSpellingShake();
       inputEl.select();
     }
   }
@@ -1775,9 +1887,21 @@ function checkSpelling() {
 }
 
 document.getElementById('spelling-submit').addEventListener('click', checkSpelling);
+document.getElementById('spelling-input').addEventListener('input', () => {
+  const len = document.getElementById('spelling-input').value.length;
+  if (len > spellingPrevLen) { playKeyClick(true); renderSpellingCells(len - 1); }
+  else { if (len < spellingPrevLen) playKeyClick(false); renderSpellingCells(); }
+  spellingPrevLen = len;
+});
 document.getElementById('spelling-input').addEventListener('keydown', (e) => {
   // ignore Enter while an IME is composing (keyCode 229)
   if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) checkSpelling();
+});
+// tapping anywhere on the cells refocuses the hidden input (pops the mobile keyboard)
+document.getElementById('spelling-type').addEventListener('click', () => {
+  try { const c = getAudioCtx(); if (c.state !== 'running') c.resume(); } catch { /* ignore */ }
+  const input = document.getElementById('spelling-input');
+  if (!input.disabled) input.focus();
 });
 document.getElementById('spelling-listen').addEventListener('click', () => {
   const word = spellingWords[spellingIndex];
