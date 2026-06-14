@@ -166,24 +166,28 @@
         </div>
       </div>
       <div class="flashcard-settings" id="flashcard-settings">
-        <label for="fc-category">分类：</label>
-        <select id="fc-category">
-          <option value="all">全部 (850)</option>
-          <option value="operations">操作词 (100)</option>
-          <option value="general">通用词 (400)</option>
-          <option value="picturable">图示词 (200)</option>
-          <option value="qualities">一般性质 (100)</option>
-          <option value="opposites">对立性质 (50)</option>
-          <option value="new">没学过的</option>
-          <option value="wrong">要加强的</option>
-        </select>
-        <label for="fc-count">数量：</label>
-        <select id="fc-count">
-          <option value="5">5</option>
-          <option value="10" selected>10</option>
-          <option value="20">20</option>
-          <option value="50">50</option>
-        </select>
+        <span class="setting-group">
+          <label for="fc-category">分类：</label>
+          <select id="fc-category">
+            <option value="all">全部 (850)</option>
+            <option value="operations">操作词 (100)</option>
+            <option value="general">通用词 (400)</option>
+            <option value="picturable">图示词 (200)</option>
+            <option value="qualities">一般性质 (100)</option>
+            <option value="opposites">对立性质 (50)</option>
+            <option value="new">没学过的</option>
+            <option value="wrong">要加强的</option>
+          </select>
+        </span>
+        <span class="setting-group">
+          <label for="fc-count">数量：</label>
+          <select id="fc-count">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+        </span>
       </div>
     </div>
 
@@ -223,23 +227,27 @@
         </div>
       </div>
       <div class="flashcard-settings" id="quiz-settings">
-        <label for="quiz-category">分类：</label>
-        <select id="quiz-category">
-          <option value="learned">学过的词</option>
-          <option value="all">全部 (850)</option>
-          <option value="operations">操作词 (100)</option>
-          <option value="general">通用词 (400)</option>
-          <option value="picturable">图示词 (200)</option>
-          <option value="qualities">一般性质 (100)</option>
-          <option value="opposites">对立性质 (50)</option>
-          <option value="wrong">要加强的</option>
-        </select>
-        <label for="quiz-count">题数：</label>
-        <select id="quiz-count">
-          <option value="5">5</option>
-          <option value="10" selected>10</option>
-          <option value="20">20</option>
-        </select>
+        <span class="setting-group">
+          <label for="quiz-category">分类：</label>
+          <select id="quiz-category">
+            <option value="learned">学过的词</option>
+            <option value="all">全部 (850)</option>
+            <option value="operations">操作词 (100)</option>
+            <option value="general">通用词 (400)</option>
+            <option value="picturable">图示词 (200)</option>
+            <option value="qualities">一般性质 (100)</option>
+            <option value="opposites">对立性质 (50)</option>
+            <option value="wrong">要加强的</option>
+          </select>
+        </span>
+        <span class="setting-group">
+          <label for="quiz-count">题数：</label>
+          <select id="quiz-count">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+          </select>
+        </span>
       </div>
     </div>
 
@@ -288,26 +296,32 @@
         </div>
       </div>
       <div class="flashcard-settings" id="spelling-settings">
-        <label for="spelling-mode">玩法：</label>
-        <select id="spelling-mode">
-          <option value="zh">看中文拼</option>
-          <option value="listen">听音拼词</option>
-        </select>
-        <label for="spelling-category">分类：</label>
-        <select id="spelling-category">
-          <option value="learned">学过的词</option>
-          <option value="picturable">图示词 (200)</option>
-          <option value="general">通用词 (400)</option>
-          <option value="qualities">一般性质 (100)</option>
-          <option value="opposites">对立性质 (50)</option>
-          <option value="wrong">要加强的</option>
-        </select>
-        <label for="spelling-count">题数：</label>
-        <select id="spelling-count">
-          <option value="5">5</option>
-          <option value="10" selected>10</option>
-          <option value="20">20</option>
-        </select>
+        <span class="setting-group">
+          <label for="spelling-mode">玩法：</label>
+          <select id="spelling-mode">
+            <option value="zh">看中文拼</option>
+            <option value="listen">听音拼词</option>
+          </select>
+        </span>
+        <span class="setting-group">
+          <label for="spelling-category">分类：</label>
+          <select id="spelling-category">
+            <option value="learned">学过的词</option>
+            <option value="picturable">图示词 (200)</option>
+            <option value="general">通用词 (400)</option>
+            <option value="qualities">一般性质 (100)</option>
+            <option value="opposites">对立性质 (50)</option>
+            <option value="wrong">要加强的</option>
+          </select>
+        </span>
+        <span class="setting-group">
+          <label for="spelling-count">题数：</label>
+          <select id="spelling-count">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+          </select>
+        </span>
       </div>
     </div>
 
@@ -334,18 +348,22 @@
         </div>
       </div>
       <div class="flashcard-settings" id="memory-settings">
-        <label for="memory-mode">玩法：</label>
-        <select id="memory-mode">
-          <option value="zh">英文配中文</option>
-          <option value="emoji">英文配图</option>
-        </select>
-        <label for="memory-pairs-count">对数：</label>
-        <select id="memory-pairs-count">
-          <option value="4">4对</option>
-          <option value="6" selected>6对</option>
-          <option value="8">8对</option>
-          <option value="10">10对</option>
-        </select>
+        <span class="setting-group">
+          <label for="memory-mode">玩法：</label>
+          <select id="memory-mode">
+            <option value="zh">英文配中文</option>
+            <option value="emoji">英文配图</option>
+          </select>
+        </span>
+        <span class="setting-group">
+          <label for="memory-pairs-count">对数：</label>
+          <select id="memory-pairs-count">
+            <option value="4">4对</option>
+            <option value="6" selected>6对</option>
+            <option value="8">8对</option>
+            <option value="10">10对</option>
+          </select>
+        </span>
       </div>
     </div>
 

@@ -814,31 +814,115 @@ svg.icon-lg { width: 28px; height: 28px; }
 }
 
 .flashcard-settings {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
   margin-top: 16px;
-  padding: 12px;
+  padding: 14px 16px;
   background: var(--card);
   border-radius: var(--radius-md);
   font-size: var(--fs-sm);
   color: var(--text-light);
 }
-.flashcard-settings label { font-weight: 700; }
-.flashcard-settings select {
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  border: 2px solid var(--primary-pale);
+.flashcard-settings .setting-group {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.flashcard-settings label {
+  font-weight: 800;
+  font-size: var(--fs-sm);
+  color: var(--text-light);
+}
+
+/* collapse/expand: panel shows a one-line summary, expands on tap */
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.settings-lead { display: inline-flex; flex: 0 0 auto; color: var(--primary); }
+.settings-summary {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  color: var(--text-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.settings-chevron {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--primary);
+  transition: transform 0.28s ease;
+}
+.flashcard-settings:not(.collapsed) .settings-chevron { transform: rotate(180deg); }
+.settings-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.28s ease;
+}
+.flashcard-settings.collapsed .settings-body { grid-template-rows: 0fr; }
+.settings-body-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow: hidden;
+  padding-top: 14px;
+}
+
+/* tappable chip groups that replace the native <select>s */
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip-group.scrollable {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+.chip-group.scrollable::-webkit-scrollbar { display: none; }
+.chip {
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+  padding: 8px 15px;
+  min-height: 40px;
+  border: 1.5px solid var(--primary-pale);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text-light);
   font-family: inherit;
   font-size: var(--fs-sm);
-  font-weight: 600;
-  background: white;
-  color: var(--text);
-  outline: none;
-  min-height: 44px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s, color 0.15s, box-shadow 0.15s, border-color 0.15s;
 }
-.flashcard-settings select:focus { border-color: var(--primary); }
+.chip:active { transform: scale(0.93); }
+.chip.active {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--primary), #8b80ff);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(108, 99, 255, 0.3);
+  animation: chipPop 0.22s ease;
+}
+@keyframes chipPop {
+  0% { transform: scale(0.9); }
+  55% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
 
 /* ===== Quiz ===== */
 .quiz-area { display: flex; flex-direction: column; align-items: center; gap: 16px; }

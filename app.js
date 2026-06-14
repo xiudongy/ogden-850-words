@@ -2514,10 +2514,110 @@ document.querySelectorAll('.back-btn').forEach(btn => {
   btn.addEventListener('click', () => goBack());
 });
 
+// ===== Setting controls: chips + collapse/expand =====
+// Each native <select> becomes a tappable chip row (kept hidden as the source of
+// truth so every value read, 'change' listener, and restart-confirm revert still
+// works). The whole panel collapses to a one-line summary of the current choices
+// and expands only when tapped, keeping the play area uncluttered. The select's
+// `value` setter is intercepted so any programmatic write — including the cancel-
+// revert in the change handlers — re-renders chips + summary (controlled-input
+// trick). Zero game-logic changes needed.
+function enhanceSelect(select, onChange) {
+  const group = document.createElement('div');
+  group.className = 'chip-group';
+  if (select.options.length > 4) group.classList.add('scrollable');
+
+  const chips = Array.from(select.options).map(opt => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip';
+    chip.dataset.value = opt.value;
+    chip.textContent = opt.textContent;
+    chip.addEventListener('click', () => {
+      if (select.value === opt.value) return;
+      select.dataset.prev = select.value; // mimic the focus snapshot the native flow relied on
+      select.value = opt.value;           // -> setter reflects + re-renders chips + summary
+      playSound('flip');
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    group.appendChild(chip);
+    return chip;
+  });
+
+  let initialised = false;
+  const renderActive = () => {
+    chips.forEach(c => {
+      const on = c.dataset.value === select.value;
+      c.classList.toggle('active', on);
+      if (on && initialised && group.classList.contains('scrollable')) {
+        c.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+      }
+    });
+    if (onChange) onChange();
+  };
+
+  let current = select.value;
+  Object.defineProperty(select, 'value', {
+    configurable: true,
+    get() { return current; },
+    set(v) {
+      current = v;
+      Array.from(select.options).forEach(o => { o.selected = o.value === v; });
+      renderActive();
+    },
+  });
+
+  select.hidden = true;
+  select.tabIndex = -1;
+  select.parentNode.insertBefore(group, select.nextSibling);
+  renderActive();
+  initialised = true;
+}
+
+function enhanceSettingSelects() {
+  document.querySelectorAll('.flashcard-settings').forEach(panel => {
+    const selects = Array.from(panel.querySelectorAll('select'));
+    if (!selects.length) return;
+
+    // wrap the existing setting rows in a collapsible body
+    const body = document.createElement('div');
+    body.className = 'settings-body';
+    const inner = document.createElement('div');
+    inner.className = 'settings-body-inner';
+    while (panel.firstChild) inner.appendChild(panel.firstChild);
+    body.appendChild(inner);
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'settings-toggle';
+    toggle.innerHTML =
+      `<span class="settings-lead">${icon('sliders-horizontal', 16)}</span>` +
+      `<span class="settings-summary"></span>` +
+      `<span class="settings-chevron">${icon('chevron-down', 20)}</span>`;
+    panel.appendChild(toggle);
+    panel.appendChild(body);
+    panel.classList.add('collapsed');
+
+    const summaryEl = toggle.querySelector('.settings-summary');
+    const updateSummary = () => {
+      summaryEl.textContent = selects.map(s => {
+        const opt = s.options[s.selectedIndex] || s.options[0];
+        return (opt ? opt.textContent : '').replace(/\s*\(.*?\)\s*/g, '').trim();
+      }).join(' · ');
+    };
+
+    toggle.addEventListener('click', () => { panel.classList.toggle('collapsed'); playSound('flip'); });
+    selects.forEach(select => enhanceSelect(select, updateSummary));
+    updateSummary();
+  });
+  refreshIcons();
+}
+
 // ===== Initialize =====
 probeStorage();
 getProgress();
 applyTheme();
+enhanceSettingSelects();
 try { history.replaceState({ page: 'home' }, '', location.pathname); } catch {}
 refreshHome();
 refreshIcons();
